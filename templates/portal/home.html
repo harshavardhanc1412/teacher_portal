@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Teacher Portal</a>
+        <div class="d-flex">
+            <span class="navbar-text me-3">Welcome, {{ request.user.username }}</span>
+            <a href="{% url 'logout' %}" class="btn btn-outline-light">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Student Management</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#studentModal">
+            <i class="bi bi-plus-lg"></i> Add Student
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Subject</th>
+                    <th>Marks</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="studentTableBody">
+                {% for student in students %}
+                <tr data-id="{{ student.id }}">
+                    <td class="editable" data-field="name">{{ student.name }}</td>
+                    <td class="editable" data-field="subject">{{ student.subject }}</td>
+                    <td class="editable" data-field="marks">{{ student.marks }}</td>
+                    <td>
+                        <a href="{% url 'student_detail' student.id %}" class="btn btn-sm btn-success view-btn">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <button class="btn btn-sm btn-primary edit-btn">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-btn">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // In your script.js
+$(document).on('click', '.view-btn', function(e) {
+    e.preventDefault();
+    const url = $(this).attr('href');
+    
+    // Show loading spinner
+    $('#studentDetailsContent').html(`
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `);
+    
+    // Show modal
+    const viewModal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+    viewModal.show();
+    
+    // Fetch student details via URL
+    $.ajax({
+        url: url,
+        type: 'GET',
+        success: function(data) {
+            // Extract the content from the response
+            const content = $(data).find('.card-body').html();
+            $('#studentDetailsContent').html(content);
+        },
+        error: function(xhr) {
+            $('#studentDetailsContent').html(`
+                <div class="alert alert-danger">
+                    Error loading student details: ${xhr.statusText}
+                </div>
+            `);
+        }
+    });
+});
+</script>
+
+<!-- Include the modal template -->
+{% include 'portal/student_modal.html' %}
+{% endblock %}

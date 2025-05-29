@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>Student Details</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <tr>
+                    <th>Name</th>
+                    <td>{{ student.name }}</td>
+                </tr>
+                <tr>
+                    <th>Subject</th>
+                    <td>{{ student.subject }}</td>
+                </tr>
+                <tr>
+                    <th>Marks</th>
+                    <td>{{ student.marks }}</td>
+                </tr>
+                <tr>
+                    <th>Teacher</th>
+                    <td>{{ student.teacher.username }}</td>
+                </tr>
+            </table>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

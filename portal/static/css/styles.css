@@ -1,0 +1,13 @@
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+}
+
+.editable {
+    cursor: pointer;
+}
+
+.editable:hover {
+    background-color: #f8f9fa;
+}

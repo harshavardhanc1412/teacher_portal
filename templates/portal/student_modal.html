@@ -1,0 +1,198 @@
+<div class="modal fade" id="studentModal" tabindex="-1" aria-labelledby="studentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="studentModalLabel">Add New Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="studentForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Student Name</label>
+                        <input type="text" class="form-control" id="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="marks" class="form-label">Marks</label>
+                        <input type="number" step="0.01" class="form-control" id="marks" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveStudent">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+    // Add new student
+    $('#saveStudent').click(function() {
+        const name = $('#name').val();
+        const subject = $('#subject').val();
+        const marks = $('#marks').val();
+        
+        if (name && subject && marks) {
+            $.ajax({
+                url: '/manage-student/',
+                type: 'POST',
+                data: JSON.stringify({
+                    action: 'add',
+                    name: name,
+                    subject: subject,
+                    marks: marks
+                }),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    }
+                },
+                error: function(xhr) {
+                    alert('Error adding student: ' + xhr.responseJSON.message);
+                }
+            });
+        } else {
+            alert('Please fill all fields');
+        }
+    });
+    
+    // Edit student inline
+    $('.edit-btn').click(function() {
+        const row = $(this).closest('tr');
+        const studentId = row.data('id');
+        const cells = row.find('.editable');
+        
+        // Store original values and convert each editable cell to an input field
+        cells.each(function() {
+            const cell = $(this);
+            const originalValue = cell.text().trim();
+            const field = cell.data('field');
+            
+            cell.data('original-value', originalValue); // Store original value
+            cell.html(`<input type="${field === 'marks' ? 'number' : 'text'}" 
+                            class="form-control form-control-sm" 
+                            value="${originalValue}">`);
+        });
+        
+        // Focus on the first input
+        row.find('input').first().focus();
+        
+        // Handle input submission when all inputs lose focus
+        const inputs = row.find('input');
+        let blurCount = 0;
+        
+        inputs.blur(function() {
+            blurCount++;
+            if (blurCount === inputs.length) { // All inputs have lost focus
+                const updatedData = {
+                    action: 'edit',
+                    id: studentId,
+                    name: row.find('[data-field=name] input').val().trim(),
+                    subject: row.find('[data-field=subject] input').val().trim(),
+                    marks: row.find('[data-field=marks] input').val().trim()
+                };
+                
+                // Check if any field changed
+                let hasChanges = false;
+                cells.each(function() {
+                    const cell = $(this);
+                    const field = cell.data('field');
+                    const originalValue = cell.data('original-value');
+                    const newValue = updatedData[field];
+                    if (newValue !== originalValue) {
+                        hasChanges = true;
+                    }
+                    // Restore cell content (will update on success)
+                    cell.text(newValue);
+                });
+                
+                if (hasChanges) {
+                    $.ajax({
+                        url: '/manage-student/',
+                        type: 'POST',
+                        data: JSON.stringify(updatedData),
+                        contentType: 'application/json',
+                        headers: {
+                            'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+                        },
+                        success: function(response) {
+                            if (response.status !== 'success') {
+                                alert('Error updating student: ' + (response.message || 'Unknown error'));
+                                // Revert to original values on error
+                                cells.each(function() {
+                                    const cell = $(this);
+                                    cell.text(cell.data('original-value'));
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            alert('Error updating student: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                            // Revert to original values on error
+                            cells.each(function() {
+                                const cell = $(this);
+                                cell.text(cell.data('original-value'));
+                            });
+                        }
+                    });
+                }
+            }
+        });
+        
+        // Handle Enter key to move to next input or submit
+        inputs.keypress(function(e) {
+            if (e.which === 13) { // Enter key
+                const currentIndex = inputs.index(this);
+                if (currentIndex < inputs.length - 1) {
+                    inputs.eq(currentIndex + 1).focus(); // Move to next input
+                } else {
+                    inputs.blur(); // Trigger blur on all inputs to submit
+                }
+            }
+        });
+    });
+    
+    // Delete student
+    $('.delete-btn').click(function() {
+        if (confirm('Are you sure you want to delete this student?')) {
+            const row = $(this).closest('tr');
+            const studentId = row.data('id');
+            
+            $.ajax({
+                url: '/manage-student/',
+                type: 'POST',
+                data: JSON.stringify({
+                    action: 'delete',
+                    id: studentId
+                }),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        row.remove();
+                    }
+                },
+                error: function(xhr) {
+                    alert('Error deleting student: ' + xhr.responseJSON.message);
+                }
+            });
+        }
+    });
+    
+    // Reset modal on close
+    $('#studentModal').on('hidden.bs.modal', function() {
+        $('#studentForm')[0].reset();
+    });
+});
+</script>
