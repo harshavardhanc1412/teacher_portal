@@ -161,6 +161,71 @@
         });
     });
     
+    $('.update-btn').click(function() {
+        const row = $(this).closest('tr');
+        const studentId = row.data('id');
+        const marksCell = row.find('[data-field="marks"]');
+        
+        // Store original value and convert marks cell to an input field
+        const originalValue = marksCell.text().trim();
+        marksCell.data('original-value', originalValue);
+        marksCell.html(`<input type="number" 
+                            class="form-control form-control-sm" 
+                            value="${originalValue}">`);
+        
+        // Focus on the input
+        const input = marksCell.find('input');
+        input.focus();
+        
+        // Handle submission when input loses focus or Enter is pressed
+        const handleSubmission = function() {
+            const updatedData = {
+                action: 'update',
+                id: studentId,
+                marks: input.val().trim()
+            };
+            
+            // Check if marks changed
+            if (updatedData.marks !== originalValue) {
+                $.ajax({
+                    url: '/manage-student/',
+                    type: 'POST',
+                    data: JSON.stringify(updatedData),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        if (response.status !== 'success') {
+                            alert('Error updating marks: ' + (response.message || 'Unknown error'));
+                            // Revert to original value on error
+                            marksCell.text(originalValue);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('Error updating marks: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                        // Revert to original value on error
+                        marksCell.text(originalValue);
+                    }
+                });
+            } else {
+                // No changes, just revert to original display
+                marksCell.text(originalValue);
+            }
+        };
+        
+        // Handle blur event
+        input.blur(handleSubmission);
+        
+        // Handle Enter key
+        input.keypress(function(e) {
+            if (e.which === 13) { // Enter key
+                handleSubmission();
+            }
+        });
+    });
+
+    
     // Delete student
     $('.delete-btn').click(function() {
         if (confirm('Are you sure you want to delete this student?')) {

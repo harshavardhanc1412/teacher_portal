@@ -59,6 +59,16 @@ def manage_student(request):
                 return JsonResponse({'status': 'success'})
             except Student.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Student not found'}, status=404)
+            
+        elif action == 'update':
+            student_id = data.get('id')
+            try:
+                student = Student.objects.get(id=student_id, teacher=request.user)
+                student.marks = marks
+                student.save()
+                return JsonResponse({'status': 'success'})
+            except Student.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Student not found'}, status=404)
         
         elif action == 'delete':
             student_id = data.get('id')
