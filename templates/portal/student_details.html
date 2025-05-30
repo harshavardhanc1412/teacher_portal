@@ -18,7 +18,7 @@
                 </tr>
                 <tr>
                     <th>Marks</th>
-                    <td>{{ student.marks }}</td>
+                    <td data-field="marks">{{ student.marks }}</td>
                 </tr>
                 <tr>
                     <th>Teacher</th>
@@ -26,7 +26,132 @@
                 </tr>
             </table>
             <a href="{% url 'home' %}" class="btn btn-secondary">Back to List</a>
+            <button class="btn btn-info update-btn" data-id="{{ student.id }}" data-subject="{{ student.subject }}">Update Marks</button>
         </div>
     </div>
 </div>
+
+<!-- Modal for updating marks -->
+<div class="modal fade" id="updateMarksModal" tabindex="-1" aria-labelledby="updateMarksModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateMarksModalLabel">Update Marks</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="marksInput" class="form-label">Additional Marks</label>
+                    <input type="number" class="form-control" id="marksInput" placeholder="Enter additional marks" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveMarksBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Debugging: Check if jQuery is loaded
+    if (typeof $ === 'undefined') {
+        console.error('jQuery is not loaded');
+        return;
+    }
+
+    // Debugging: Check if Bootstrap is loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded');
+        return;
+    }
+
+    // Use event delegation for dynamic content
+    $(document).on('click', '.update-btn', function() {
+        console.log('Update button clicked'); // Debugging log
+        const studentId = $(this).attr('data-id');
+        const subject = $(this).attr('data-subject');
+        const marksCell = $('td[data-field="marks"]');
+        const originalValue = marksCell.text().trim();
+
+        // Debugging: Log data attributes
+        console.log('Student ID:', studentId, 'Subject:', subject, 'Original Marks:', originalValue);
+
+        if (!studentId || !subject) {
+            console.error('Missing student ID or subject');
+            alert('Error: Student data is missing');
+            return;
+        }
+
+        // Store data in modal for use in save
+        $('#saveMarksBtn').data('studentId', studentId);
+        $('#saveMarksBtn').data('subject', subject);
+        $('#saveMarksBtn').data('originalValue', originalValue);
+
+        // Clear input and show modal
+        $('#marksInput').val('');
+        try {
+            $('#updateMarksModal').modal('show');
+            console.log('Modal opened successfully');
+        } catch (e) {
+            console.error('Error opening modal:', e);
+            alert('Error opening update modal');
+        }
+    });
+
+    $('#saveMarksBtn').on('click', function() {
+        console.log('Save button clicked'); // Debugging log
+        const studentId = $(this).data('studentId');
+        const subject = $(this).data('subject');
+        const originalValue = $(this).data('originalValue');
+        const marksCell = $('td[data-field="marks"]');
+        const newMarks = $('#marksInput').val().trim();
+
+        // Validate input
+        if (!newMarks || isNaN(newMarks) || newMarks < 0) {
+            console.error('Invalid marks input:', newMarks);
+            alert('Please enter a valid number for marks');
+            return;
+        }
+
+        const updatedData = {
+            action: 'update',
+            id: studentId,
+            subject: subject,
+            marks: newMarks
+        };
+
+        console.log('Sending AJAX request:', updatedData); // Debugging log
+
+        $.ajax({
+            url: '/manage-student/',
+            type: 'POST',
+            data: JSON.stringify(updatedData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                console.log('AJAX success:', response); // Debugging log
+                if (response.status === 'success') {
+                    marksCell.text(response.new_total);
+                    $('#updateMarksModal').modal('hide');
+                } else {
+                    console.error('Update failed:', response.message);
+                    alert('Error updating marks: ' + (response.message || 'Unknown error'));
+                    marksCell.text(originalValue);
+                }
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr.responseJSON || xhr);
+                alert('Error updating marks: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                marksCell.text(originalValue);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
